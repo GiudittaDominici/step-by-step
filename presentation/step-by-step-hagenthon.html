@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Step by Step — Hagenthon</title>
+<style>
+  :root {
+    --purple:       #A100FF;
+    --purple-mid:   #7500C0;
+    --purple-light: #C2A3FF;
+    --purple-dark:  #460073;
+    --bg-start:     #1a0033;
+    --bg-mid:       #2d0052;
+    --bg-end:       #4d0099;
+    --rose:         #FF50A0;
+    --teal:         #05F2DB;
+    --ink:          #0A0014;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #000;
+    font-family: "Graphik", "Inter", "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Deck ──────────────────────────────────────────── */
+  #deck {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 52px 64px 44px;
+    background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-mid) 55%, var(--bg-end) 100%);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(40px);
+    transition: opacity .4s ease, transform .4s ease;
+    overflow: hidden;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0);
+  }
+  .slide.prev {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+
+  /* ── Decorative glow blob ───────────────────────────── */
+  .slide::before {
+    content: "";
+    position: absolute;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(161,0,255,.25) 0%, transparent 70%);
+    top: -200px; right: -200px;
+    pointer-events: none;
+  }
+
+  /* ── Brand bar ──────────────────────────────────────── */
+  .brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .brand-logo {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: rgba(255,255,255,.9);
+    text-transform: lowercase;
+  }
+  .brand-event {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--purple-light);
+  }
+
+  /* ── Slide content area ─────────────────────────────── */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Typography ─────────────────────────────────────── */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--purple-light);
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-size: clamp(36px, 5.5vw, 64px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  h1 .grad {
+    background: linear-gradient(90deg, var(--purple-light), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  h2 {
+    font-size: clamp(26px, 3.8vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .sub {
+    font-size: clamp(15px, 1.6vw, 19px);
+    color: rgba(255,255,255,.7);
+    line-height: 1.6;
+    max-width: 760px;
+  }
+  .sub strong { color: #fff; }
+  .sub em { color: var(--purple-light); font-style: normal; }
+
+  /* ── Cover slide ────────────────────────────────────── */
+  .cover-title-wrap { margin-top: 32px; }
+  .cover-tagline {
+    font-size: clamp(16px, 1.8vw, 22px);
+    color: rgba(255,255,255,.6);
+    margin-top: 14px;
+    font-style: italic;
+    font-weight: 300;
+  }
+  .cover-meta {
+    display: flex;
+    gap: 32px;
+    margin-top: 48px;
+  }
+  .cover-meta-item {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,.45);
+  }
+  .cover-meta-item span {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255,255,255,.75);
+    letter-spacing: 0;
+    text-transform: none;
+    margin-top: 4px;
+  }
+  .tema-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(161,0,255,.18);
+    border: 1px solid rgba(161,0,255,.4);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--purple-light);
+    margin-bottom: 28px;
+  }
+
+  /* ── Cards / grid ───────────────────────────────────── */
+  .grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 28px;
+  }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .card {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+  .card.purple {
+    background: rgba(161,0,255,.1);
+    border-color: rgba(161,0,255,.3);
+  }
+  .card.rose {
+    background: rgba(255,80,160,.08);
+    border-color: rgba(255,80,160,.3);
+  }
+  .card.teal {
+    background: rgba(5,242,219,.06);
+    border-color: rgba(5,242,219,.25);
+  }
+  .card-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--purple-light);
+    margin-bottom: 8px;
+  }
+  .card-label.rose { color: var(--rose); }
+  .card-label.teal { color: var(--teal); }
+  .card h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .card p {
+    font-size: 14px;
+    color: rgba(255,255,255,.65);
+    line-height: 1.55;
+  }
+  .card p strong { color: #fff; }
+
+  /* ── Levels (soluzione) ─────────────────────────────── */
+  .levels { display: flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+  .level {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .level-num {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background: rgba(161,0,255,.2);
+    border: 1px solid rgba(161,0,255,.4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: var(--purple-light);
+    flex-shrink: 0;
+  }
+  .level-body h4 {
+    font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px;
+  }
+  .level-body p {
+    font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.5;
+  }
+
+  /* ── Code string display ────────────────────────────── */
+  .code-fields { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .code-row {
+    display: grid;
+    grid-template-columns: 180px 200px 1fr;
+    gap: 12px;
+    align-items: center;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .code-name { font-size: 13px; font-weight: 700; color: var(--purple-light); }
+  .code-val {
+    font-family: "Courier New", monospace;
+    font-size: 14px;
+    color: var(--teal);
+    letter-spacing: 0.08em;
+  }
+  .code-error { font-size: 13px; color: rgba(255,255,255,.55); line-height: 1.4; }
+  .code-error strong { color: var(--rose); }
+
+  /* ── Adaptive table ─────────────────────────────────── */
+  .adapt-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .adapt-table th {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: rgba(255,255,255,.4); padding: 8px 14px; text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  .adapt-table td {
+    padding: 11px 14px; font-size: 13px; color: rgba(255,255,255,.7);
+    border-bottom: 1px solid rgba(255,255,255,.05);
+    vertical-align: top; line-height: 1.4;
+  }
+  .adapt-table td strong { color: #fff; }
+  .adapt-table td.highlight { color: var(--teal); font-weight: 600; }
+  .adapt-table tr:last-child td { border-bottom: none; }
+  .adapt-table tr.bold-row td { background: rgba(161,0,255,.07); }
+
+  /* ── Metric row ─────────────────────────────────────── */
+  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 24px; }
+  .metric {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .metric-label { font-size: 11px; color: rgba(255,255,255,.45); line-height: 1.4; margin-bottom: 10px; }
+  .metric-vals { display: flex; gap: 8px; align-items: flex-end; justify-content: center; }
+  .metric-a { font-size: 26px; font-weight: 700; color: var(--rose); line-height: 1; }
+  .metric-b { font-size: 26px; font-weight: 700; color: var(--teal); line-height: 1; }
+  .metric-sep { font-size: 14px; color: rgba(255,255,255,.3); padding-bottom: 4px; }
+  .metric-sub { font-size: 10px; color: rgba(255,255,255,.3); margin-top: 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* ── Limits ─────────────────────────────────────────── */
+  .limits { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+  .limit {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 18px;
+    border: 1px solid rgba(255,80,160,.2);
+    border-radius: 10px;
+    background: rgba(255,80,160,.04);
+  }
+  .limit-icon {
+    font-size: 18px; flex-shrink: 0; margin-top: 1px;
+    color: var(--rose);
+  }
+  .limit-text { font-size: 14px; color: rgba(255,255,255,.7); line-height: 1.5; }
+  .limit-text strong { color: #fff; }
+
+  /* ── Arch blocks ────────────────────────────────────── */
+  .arch { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  .arch-block {
+    padding: 20px 22px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+  }
+  .arch-block h4 {
+    font-size: 14px; font-weight: 700; color: var(--purple-light); margin-bottom: 6px;
+  }
+  .arch-block p { font-size: 13px; color: rgba(255,255,255,.6); line-height: 1.5; }
+
+  /* ── Highlight callout ──────────────────────────────── */
+  .callout {
+    background: rgba(161,0,255,.12);
+    border-left: 3px solid var(--purple);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    margin-top: 20px;
+    font-size: 15px;
+    color: rgba(255,255,255,.85);
+    line-height: 1.6;
+  }
+  .callout strong { color: #fff; }
+
+  /* ── Big stat ───────────────────────────────────────── */
+  .big-stat { display: flex; gap: 48px; margin-top: 32px; align-items: flex-start; }
+  .stat { text-align: left; }
+  .stat-num { font-size: 72px; font-weight: 700; line-height: 1; letter-spacing: -0.04em; }
+  .stat-num.rose { color: var(--rose); }
+  .stat-num.teal { color: var(--teal); }
+  .stat-label { font-size: 13px; color: rgba(255,255,255,.5); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.15em; }
+
+  /* ── Footer bar ─────────────────────────────────────── */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,.08);
+    flex-shrink: 0;
+  }
+  .footer-left { font-size: 11px; color: rgba(255,255,255,.25); letter-spacing: 0.1em; text-transform: uppercase; }
+  .progress {
+    display: flex; gap: 4px; align-items: center;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,.2);
+    transition: background .3s;
+  }
+  .dot.active { background: var(--purple-light); }
+
+  /* ── Arrow pill nav ─────────────────────────────────── */
+  #nav {
+    position: fixed;
+    bottom: 28px;
+    right: 36px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+  }
+  .nav-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    color: rgba(255,255,255,.7);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s, color .2s;
+  }
+  .nav-btn:hover { background: rgba(161,0,255,.3); color: #fff; }
+
+  /* ── Slide number ───────────────────────────────────── */
+  #slide-num {
+    position: fixed;
+    bottom: 34px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,.25);
+    z-index: 100;
+  }
+
+  /* Demo slide accents */
+  .demo-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,80,160,.12);
+    border: 1px solid rgba(255,80,160,.3);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--rose);
+    margin-bottom: 20px;
+  }
+  .demo-badge.teal {
+    background: rgba(5,242,219,.1);
+    border-color: rgba(5,242,219,.3);
+    color: var(--teal);
+  }
+
+  .checkmark-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .checkmark-list li {
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 15px; color: rgba(255,255,255,.75); line-height: 1.5;
+  }
+  .checkmark-list li::before {
+    content: "›"; color: var(--purple); font-weight: 700; font-size: 18px; flex-shrink: 0; margin-top: -1px;
+  }
+  .checkmark-list li strong { color: #fff; }
+
+  .x-list li::before { content: "×"; color: var(--rose); }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; margin-top: 20px; }
+
+  /* Closing slide */
+  .closing-title {
+    font-size: clamp(48px, 7vw, 88px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    color: #fff;
+    line-height: 1;
+  }
+  .closing-title .grad {
+    background: linear-gradient(90deg, var(--purple-light), var(--teal) 60%, var(--rose));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+</style>
+</head>
+<body>
+
+<div id="deck">
+
+  <!-- ────────────────────── 1. COVER ────────────────────── -->
+  <section class="slide active" id="s1">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Hagenthon · Application Engineering</span>
+    </div>
+    <div class="content">
+      <div class="tema-badge">Tema 03 — Educazione Digitale Inclusiva</div>
+      <div class="cover-title-wrap">
+        <h1>Step by <span class="grad">Step</span></h1>
+        <p class="cover-tagline">Un'estensione browser che guida la compilazione di moduli complessi un passo alla volta,<br>progettata per chi ha dislessia o difficoltà di attenzione.</p>
+      </div>
+      <div class="cover-meta">
+        <div class="cover-meta-item">Team<span>Ilaria Scarino &amp; Giuditta Dominici</span></div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Hagenthon 2026</span>
+      <div class="progress" id="prog1"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 2. SARA ────────────────────── -->
+  <section class="slide" id="s2">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Deliverable 01 — Learner Profile Statement</span>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Utente target</div>
+      <h2>Sara, 26 anni.</h2>
+      <p class="sub">Dislessia e difficoltà di attenzione diagnosticate.<br>
+        <strong>Non ha un problema con la tecnologia:</strong> usa WhatsApp, il delivery, l'home banking. Il blocco arriva quando l'interfaccia diventa <em>densa, burocratica e a tempo</em>.</p>
+
+      <div class="grid grid-2" style="margin-top:28px;">
+        <div class="card purple">
+          <div class="card-label">Dove si blocca</div>
+          <h3>Stringhe alfanumeriche lunghe</h3>
+          <p>Inverte caratteri, confonde <strong>0/O</strong> e <strong>1/I</strong>, perde il segno. Il portale risponde "Dati non validi" senza dire dove.</p>
+        </div>
+        <div class="card rose">
+          <div class="card-label rose">Il costo vero</div>
+          <h3>Ogni volta è la prima volta</h3>
+          <p>Sara deve chiedere aiuto e <strong>non riesce ad apprendere le procedure né a reiterarle</strong>.</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog2"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 3. IL PROBLEMA ────────────────────── -->
+  <section class="slide" id="s3">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Lo scenario</span>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Quattro campi costruiti per farla fallire</div>
+      <h2>Il modulo di cambio fornitore</h2>
+      <p class="sub" style="margin-bottom:4px;">Tanti campi, varie schermate, timer di sessione. Codici copiati manualmente da una bolletta.</p>
+
+      <div class="code-fields">
+        <div class="code-row">
+          <div>
+            <div class="code-name">Codice fiscale</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">intestatario contratto</div>
+          </div>
+          <div class="code-val">RSSMRA85M01H501Z</div>
+          <div class="code-error">16 caratteri alfanumerici. Sara confonde lettere e cifre nella parte finale e il portale rifiuta il codice senza indicare dove.</div>
+        </div>
+        <div class="code-row">
+          <div>
+            <div class="code-name">Codice POD</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">punto di prelievo, luce</div>
+          </div>
+          <div class="code-val">IT 001 E 12345678</div>
+          <div class="code-error">14 caratteri misti, con una E isolata in mezzo. Sara scrive <strong>IT001E1234S678</strong>. Portale: "Dati non validi".</div>
+        </div>
+        <div class="code-row">
+          <div>
+            <div class="code-name">Codice PDR</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">punto di riconsegna, gas</div>
+          </div>
+          <div class="code-val">0 1234 5678 9012</div>
+          <div class="code-error">14 cifre tutte uguali a vedersi, senza appigli visivi. Al nono numero ha perso il segno.</div>
+        </div>
+        <div class="code-row">
+          <div>
+            <div class="code-name">IBAN</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">domiciliazione</div>
+          </div>
+          <div class="code-val">IT60X 05428 11101 000000123456</div>
+          <div class="code-error">27 caratteri. Inverte due cifre e l'errore <strong>passa</strong> la validazione: il sito controlla solo la lunghezza.</div>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top:16px;">
+        Poi la sessione scade, il form si svuota. <strong>Al secondo tentativo, Sara deve chiedere aiuto.</strong>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog3"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 4. LA SOLUZIONE ────────────────────── -->
+  <section class="slide" id="s4">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">La soluzione</span>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Un'estensione che supporta, non sostituisce</div>
+      <h2>Tre livelli di supporto</h2>
+      <p class="sub">Il pannello si inietta nella pagina (Shadow DOM). Non riempie i campi: <strong>li fa riempire a Sara, uno alla volta.</strong></p>
+
+      <div class="levels">
+        <div class="level">
+          <div class="level-num">1</div>
+          <div class="level-body">
+            <h4>Un campo alla volta</h4>
+            <p>Il resto della pagina si attenua, il campo attivo viene evidenziato. Il pannello spiega in termini semplici cosa inserire nel campo e dove trovarlo sulla bolletta.</p>
+          </div>
+        </div>
+        <div class="level">
+          <div class="level-num">2</div>
+          <div class="level-body">
+            <h4>Verifica prima dell'invio</h4>
+            <p>I codici vengono controllati appena scritti, non dopo il rifiuto del portale. L'errore viene indicato dove sta: <em>"il gruppo 2 non torna, ricontrolla"</em>. Codice fiscale e IBAN: checksum matematico. POD/PDR: formato + inserimento a blocchi.</p>
+          </div>
+        </div>
+        <div class="level">
+          <div class="level-num">3</div>
+          <div class="level-body">
+            <h4>Il supporto si ritira</h4>
+            <p>Al modulo successivo il pannello resta in silenzio sui campi che Sara padroneggia, e parla solo dove lei sbaglia davvero.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog4"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 5. CAPABILITY SOFTWARE ────────────────────── -->
+  <section class="slide" id="s5">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">La capability software</span>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Perché non è un chatbot</div>
+      <h2>I validatori</h2>
+
+      <div class="arch">
+        <div class="arch-block" style="border-color:rgba(5,242,219,.25);background:rgba(5,242,219,.05);">
+          <h4 style="color:var(--teal);">Codice fiscale &amp; IBAN</h4>
+          <p>Hanno un carattere di controllo matematico. Un errore di trascrizione si intercetta <strong style="color:#fff;">con certezza.</strong></p>
+        </div>
+        <div class="arch-block" style="border-color:rgba(161,0,255,.3);background:rgba(161,0,255,.07);">
+          <h4 style="color:var(--purple-light);">POD &amp; PDR</h4>
+          <p>Non esiste un checksum pubblico. Si verifica solo il formato: prefisso, lunghezza, quali posizioni sono lettere e quali cifre. Difesa diversa: <strong style="color:#fff;">inserimento a blocchi di 4, segnalazione dei caratteri ambigui (0/O, 1/I, 5/S), rilettura a specchio.</strong></p>
+        </div>
+        <div class="arch-block">
+          <h4>Lettore del modulo</h4>
+          <p>Scansiona il form e ricava le etichette in cascata su 5 fonti: <em>label</em>, <em>ARIA attributes</em>, testo che precede il campo, <em>name attribute</em>, <em>placeholder</em>.</p>
+        </div>
+        <div class="arch-block">
+          <h4>Memoria locale</h4>
+          <p>Il profilo d'errore e le metriche di sessione salvati nel browser. <strong style="color:#fff;">Nessun dato personale di Sara esce dalla macchina.</strong></p>
+        </div>
+      </div>
+
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog5"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 6. DEMO 1 ────────────────────── -->
+  <section class="slide" id="s6">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Demo</span>
+    </div>
+    <div class="content">
+      <div class="demo-badge">Demo 1 — senza estensione</div>
+      <h2>Il fallimento</h2>
+
+      <div style="max-width:560px;">
+        <p class="sub">Sara compila il campo POD sbagliando un carattere.</p>
+        <div style="margin-top:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 22px;">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:12px;">Form — Codice POD</div>
+          <div style="background:#0d0020;border:1px solid rgba(255,80,160,.5);border-radius:8px;padding:12px 16px;font-family:'Courier New',monospace;font-size:16px;color:var(--rose);letter-spacing:.06em;">IT001E1234<strong style="text-decoration:underline;text-underline-offset:4px;">S</strong>678</div>
+          <div style="margin-top:12px;background:rgba(255,80,160,.1);border:1px solid rgba(255,80,160,.25);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--rose);">
+            ✕ &nbsp;Dati non validi. Verificare i campi inseriti.
+          </div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:24px;">
+        Il portale controlla il formato, ma <strong>non spiega dove Sara sta sbagliando.</strong>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog6"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 7. DEMO 2 ────────────────────── -->
+  <section class="slide" id="s7">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Demo</span>
+    </div>
+    <div class="content">
+      <div class="demo-badge">Demo 2 — modulo luce, con l'estensione</div>
+      <h2>Il pannello a fianco</h2>
+
+      <ul class="checkmark-list" style="margin-top:0;">
+        <li><strong>Un campo alla volta:</strong> il resto della pagina si attenua</li>
+        <li>Spiegazione semplice + dove trovarlo in bolletta</li>
+        <li>Inserimento guidato <strong>a blocchi di 4 caratteri</strong> per POD e PDR</li>
+        <li>Caratteri ambigui evidenziati (0/O, 1/I, 5/S)</li>
+        <li>IBAN: <strong>checksum matematico</strong> prima dell'invio</li>
+      </ul>
+
+      <div style="margin-top:20px;background:rgba(255,255,255,.04);border:1px solid rgba(5,242,219,.25);border-radius:12px;padding:20px 22px;">
+        <div style="font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin-bottom:12px;">Pannello — IBAN</div>
+        <div style="background:#0d0020;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px 16px;font-family:'Courier New',monospace;font-size:15px;color:#fff;letter-spacing:.05em;">
+          IT60 X054 2811 <span style="color:var(--rose);font-weight:700;border-bottom:2px solid var(--rose);">1010</span> 0000 0012 3456
+        </div>
+        <div style="margin-top:10px;background:rgba(255,80,160,.1);border:1px solid rgba(255,80,160,.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--rose);">
+          ⚠ Il gruppo 4 non torna. Ricontrolla le cifre <strong>1010</strong> — prova a rileggere a voce alta dalla bolletta.
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.4);">L'errore intercettato prima dell'invio — il portale non l'avrebbe mai visto.</div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog7"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 8. DEMO 3 / ADAPTIVE EVIDENCE ────────────────────── -->
+  <section class="slide" id="s8">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Deliverable 02 — Adaptive Evidence</span>
+    </div>
+    <div class="content">
+      <div class="demo-badge teal">Demo 3 — modulo gas</div>
+      <h2>Il pannello che si zittisce</h2>
+      <p class="sub">Il profilo d'errore del modulo luce guida il supporto campo per campo sul modulo gas.</p>
+
+      <table class="adapt-table">
+        <thead>
+          <tr>
+            <th>Tipo di campo</th>
+            <th>Modulo luce</th>
+            <th>Modulo gas — comportamento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nome, cognome, data di nascita</td>
+            <td>0 errori</td>
+            <td class="highlight">Pannello silenzioso. Nessuna interruzione.</td>
+          </tr>
+          <tr>
+            <td>Indirizzo, CAP</td>
+            <td>0 errori</td>
+            <td class="highlight">Silenzioso.</td>
+          </tr>
+          <tr>
+            <td>Menu a tendina con gergo</td>
+            <td>1 aiuto aperto</td>
+            <td>Etichetta riscritta, nessun blocco del flusso.</td>
+          </tr>
+          <tr>
+            <td>Codice fiscale</td>
+            <td>Corretto al 1° tentativo</td>
+            <td>Solo verifica finale.</td>
+          </tr>
+          <tr class="bold-row">
+            <td><strong>Stringa alfanumerica lunga</strong></td>
+            <td><strong style="color:var(--rose);">2 errori di trascrizione</strong></td>
+            <td><strong>Supporto pieno:</strong> blocchi da 4, ambigui segnalati, rilettura a specchio.</td>
+          </tr>
+          <tr class="bold-row">
+            <td><strong>IBAN</strong></td>
+            <td><strong style="color:var(--rose);">1 errore non intercettato dal portale</strong></td>
+            <td><strong>Supporto pieno</strong> + controllo matematico prima dell'invio.</td>
+          </tr>
+        </tbody>
+      </table>
+
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog8"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 9. LEARNING OUTCOME ────────────────────── -->
+  <section class="slide" id="s9">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Deliverable 03 — Learning Outcome Note</span>
+    </div>
+    <div class="content">
+      <div class="eyebrow">Cosa sa fare Sara alla fine</div>
+      <h2>Le sessioni tracciate</h2>
+      <p class="sub">Due sessioni comparate: modulo luce (allenamento) e modulo gas (transfer).</p>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Errori di trascrizione sui codici</div>
+          <div class="metric-vals"><span class="metric-a">3</span><span class="metric-sep">→</span><span class="metric-b">0</span></div>
+          <div class="metric-sub">luce → gas</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Invii rifiutati dal portale</div>
+          <div class="metric-vals"><span class="metric-a">2</span><span class="metric-sep">→</span><span class="metric-b">0</span></div>
+          <div class="metric-sub">luce → gas</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Campi completati senza aprire l'aiuto</div>
+          <div class="metric-vals"><span class="metric-a" style="font-size:22px;">18/30</span><span class="metric-sep">→</span><span class="metric-b" style="font-size:22px;">28/30</span></div>
+          <div class="metric-sub">luce → gas</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Richieste di aiuto a una persona</div>
+          <div class="metric-vals"><span class="metric-a">1</span><span class="metric-sep">→</span><span class="metric-b">0</span></div>
+          <div class="metric-sub">luce → gas</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Tempo di compilazione</div>
+          <div class="metric-vals"><span class="metric-a" style="font-size:22px;">14'</span><span class="metric-sep">→</span><span class="metric-b" style="font-size:22px;">6'</span></div>
+          <div class="metric-sub">luce → gas</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:18px 22px;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--purple-light);margin-bottom:10px;">Cosa sa fare Sara adesso</div>
+        <p style="font-size:15px;color:rgba(255,255,255,.8);line-height:1.6;">
+          Sa <strong style="color:#fff;">trascrivere un codice lungo a blocchi e verificarlo prima di premere invio</strong>, e sa che "residente" sul modulo parla della residenza anagrafica. Sono due competenze piccole, <em style="color:var(--teal);">trasferibili, e sue.</em>
+        </p>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog9"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 10. LIMITI ────────────────────── -->
+  <section class="slide" id="s10">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Limiti dichiarati</span>
+    </div>
+    <div class="content">
+      <h2>Cosa non funziona</h2>
+
+      <div class="limits">
+        <div class="limit">
+          <div class="limit-icon">○</div>
+          <div class="limit-text"><strong>Campione simulato, non utenti DSA reali.</strong> Non abbiamo potuto testare con un utente reale affetto da DSA.</div>
+        </div>
+        <div class="limit">
+          <div class="limit-icon">○</div>
+          <div class="limit-text"><strong>POD e PDR verificabili solo per formato.</strong> Non esiste un checksum pubblico: un codice ben formato ma sbagliato passa.</div>
+        </div>
+        <div class="limit">
+          <div class="limit-icon">○</div>
+          <div class="limit-text"><strong>Calibrata su un modulo specifico.</strong> Su un form con struttura molto diversa, l'estrazione delle etichette degrada. Non promettiamo di funzionare su qualsiasi form.</div>
+        </div>
+        <div class="limit">
+          <div class="limit-icon">○</div>
+          <div class="limit-text"><strong>La chiave API sta nel browser.</strong> In produzione servirebbe un proxy lato server.</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Step by Step</span>
+      <div class="progress" id="prog10"></div>
+    </div>
+  </section>
+
+  <!-- ────────────────────── 11. CLOSING ────────────────────── -->
+  <section class="slide" id="s11">
+    <div class="brand">
+      <span class="brand-logo">accenture</span>
+      <span class="brand-event">Hagenthon · Tema 03</span>
+    </div>
+    <div class="content" style="justify-content:center;">
+      <p class="eyebrow">Un'estensione che insegna</p>
+      <div class="closing-title">
+        Step by <span class="grad">Step.</span>
+      </div>
+      <p style="font-size:18px;color:rgba(255,255,255,.55);margin-top:28px;max-width:580px;line-height:1.6;">
+        Non compila il modulo al posto dell'utente.<br>
+        Gli insegna a compilarlo.<br>
+        <span style="color:rgba(255,255,255,.85);font-style:italic;">E poi si toglie di mezzo.</span>
+      </p>
+
+      <div style="display:flex;gap:24px;margin-top:48px;">
+        <div style="background:rgba(161,0,255,.12);border:1px solid rgba(161,0,255,.3);border-radius:12px;padding:16px 22px;font-size:13px;">
+          <div style="color:var(--purple-light);font-weight:700;margin-bottom:4px;">Tema 03</div>
+          <div style="color:rgba(255,255,255,.6);">Educazione Digitale Inclusiva</div>
+        </div>
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px 22px;font-size:13px;">
+          <div style="color:rgba(255,255,255,.5);font-weight:700;margin-bottom:4px;">Hagenthon 2026</div>
+          <div style="color:rgba(255,255,255,.4);">Accenture Application Engineering</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span class="footer-left">Hagenthon 2026</span>
+      <div class="progress" id="prog11"></div>
+    </div>
+  </section>
+
+</div><!-- /deck -->
+
+<!-- Nav buttons -->
+<div id="nav">
+  <button class="nav-btn" id="prev" title="Indietro (←)">&#8592;</button>
+  <button class="nav-btn" id="next" title="Avanti (→ / Spazio)">&#8594;</button>
+</div>
+<div id="slide-num"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const TOTAL = slides.length;
+  let current = 0;
+
+  function buildProgress(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '';
+    for (let i = 0; i < TOTAL; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === current ? ' active' : '');
+      el.appendChild(d);
+    }
+  }
+
+  function go(idx) {
+    if (idx < 0 || idx >= TOTAL) return;
+    const prev = slides[current];
+    prev.classList.remove('active');
+    prev.classList.add('prev');
+    setTimeout(() => prev.classList.remove('prev'), 400);
+    current = idx;
+    slides[current].classList.add('active');
+    // update all progress indicators
+    for (let i = 1; i <= TOTAL; i++) buildProgress('prog' + i);
+    document.getElementById('slide-num').textContent = (current + 1) + ' / ' + TOTAL;
+  }
+
+  // Init
+  for (let i = 1; i <= TOTAL; i++) buildProgress('prog' + i);
+  document.getElementById('slide-num').textContent = '1 / ' + TOTAL;
+
+  document.getElementById('next').addEventListener('click', () => go(current + 1));
+  document.getElementById('prev').addEventListener('click', () => go(current - 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault(); go(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); go(current - 1);
+    } else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(TOTAL - 1); }
+  });
+
+  // Touch swipe
+  let tx = 0;
+  document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (dx < -50) go(current + 1);
+    else if (dx > 50) go(current - 1);
+  });
+</script>
+</body>
+</html>
