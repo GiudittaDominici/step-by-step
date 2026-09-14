@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Illumia · Attivazione Offerta Luce e Gas</title>
+  <title>Attivazione Offerta Luce e Gas</title>
   <style>
     :root {
       --red: #E5003F;
@@ -239,7 +239,7 @@
 
   <!-- Header -->
   <header class="site-header">
-    <a class="logo" href="#"><span>illum</span>ia</a>
+    <a class="logo" href="#">Attivazione offerta</a>
   </header>
 
   <!-- Stepper -->
@@ -263,7 +263,7 @@
   <!-- Main content -->
   <main class="wrap">
     <h1 class="page-title">Inserisci i tuoi dati</h1>
-    <p class="page-sub">Compila tutti i campi per attivare la tua offerta Illumia Luce &amp; Gas.</p>
+    <p class="page-sub">Compila tutti i campi per attivare la tua offerta Luce &amp; Gas.</p>
 
     <form id="activation-form" novalidate>
 
@@ -399,6 +399,40 @@
         </div>
       </div>
 
+      <!-- Dati del contatore -->
+      <div class="card">
+        <div class="card-title">Dati del contatore</div>
+
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label for="pod">Codice POD <span class="req">*</span></label>
+            <input
+              type="text"
+              id="pod"
+              name="pod"
+              maxlength="14"
+              autocomplete="off"
+              placeholder="es. IT001E12345678"
+              style="font-family: 'SF Mono', Consolas, monospace; letter-spacing: 0.08em;"
+            />
+            <span class="hint">14 caratteri — inizia con IT</span>
+          </div>
+          <div class="form-group">
+            <label for="pdr">Codice PDR <span class="req">*</span></label>
+            <input
+              type="text"
+              id="pdr"
+              name="pdr"
+              maxlength="14"
+              autocomplete="off"
+              placeholder="es. 04154895190000"
+              style="font-family: 'SF Mono', Consolas, monospace; letter-spacing: 0.08em;"
+            />
+            <span class="hint">14 cifre numeriche</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Pagamento -->
       <div class="card">
         <div class="card-title">Modalità di pagamento</div>
@@ -428,7 +462,7 @@
 
       <p class="legal">
         Compilando questo modulo accetti i <a href="#">Termini e Condizioni</a> e la
-        <a href="#">Privacy Policy</a> di Illumia S.p.A. I dati inseriti saranno trattati
+        <a href="#">Privacy Policy</a>. I dati inseriti saranno trattati
         esclusivamente per la stipula del contratto di fornitura energetica.
         Campi contrassegnati con <strong>*</strong> sono obbligatori.
       </p>
