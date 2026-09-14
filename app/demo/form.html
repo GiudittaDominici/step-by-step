@@ -168,6 +168,17 @@
     }
 
     /* Radio group */
+    .field-group { border: 0; margin: 0; padding: 0; min-width: 0; }
+    .field-group legend {
+      padding: 0;
+      margin-bottom: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .field-group legend .req { color: var(--red); margin-left: 2px; }
     .radio-group { display: flex; gap: 12px; }
     .radio-option {
       flex: 1;
@@ -181,6 +192,9 @@
       transition: border-color 0.15s, background 0.15s;
       font-size: 14px;
       font-weight: 500;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: normal;
     }
     .radio-option input[type="radio"] { accent-color: var(--red); width: 18px; height: 18px; }
     .radio-option:has(input:checked) {
@@ -228,6 +242,51 @@
       line-height: 1.6;
     }
 
+    /* ===== ESITO INVIO ===== */
+    .alert {
+      display: none;
+      border: 1.5px solid var(--red);
+      background: var(--red-light);
+      color: var(--red-dark);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .alert.is-visible { display: block; }
+    .receipt {
+      display: none;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .receipt.is-visible { display: block; }
+    .receipt h2 { margin: 0 0 4px; font-size: 20px; color: var(--text); }
+    .receipt .practice { font-size: 13px; color: var(--muted); margin: 0 0 22px; }
+    .receipt dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: minmax(150px, 34%) 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .receipt dt, .receipt dd { background: white; margin: 0; padding: 9px 13px; font-size: 13px; }
+    .receipt dt {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+    }
+    .receipt dd { color: var(--text); word-break: break-all; }
+
     @media (max-width: 640px) {
       .form-row.cols-2,
       .form-row.cols-3 { grid-template-columns: 1fr; }
@@ -267,6 +326,8 @@
 
     <form id="activation-form" novalidate>
 
+      <div id="form-alert" class="alert" role="alert" aria-live="assertive"></div>
+
       <!-- Dati personali -->
       <div class="card">
         <div class="card-title">Dati del titolare</div>
@@ -274,22 +335,22 @@
         <div class="form-row cols-2">
           <div class="form-group">
             <label for="nome">Nome <span class="req">*</span></label>
-            <input type="text" id="nome" name="nome" autocomplete="given-name" placeholder="es. Sara" />
+            <input type="text" id="nome" name="nome" autocomplete="given-name" placeholder="es. Sara" required />
           </div>
           <div class="form-group">
             <label for="cognome">Cognome <span class="req">*</span></label>
-            <input type="text" id="cognome" name="cognome" autocomplete="family-name" placeholder="es. Bianchi" />
+            <input type="text" id="cognome" name="cognome" autocomplete="family-name" placeholder="es. Bianchi" required />
           </div>
         </div>
 
         <div class="form-row cols-2">
           <div class="form-group">
             <label for="data_nascita">Data di nascita <span class="req">*</span></label>
-            <input type="date" id="data_nascita" name="data_nascita" autocomplete="bday" />
+            <input type="date" id="data_nascita" name="data_nascita" autocomplete="bday" required />
           </div>
           <div class="form-group">
             <label for="luogo_nascita">Comune di nascita <span class="req">*</span></label>
-            <input type="text" id="luogo_nascita" name="luogo_nascita" placeholder="es. Milano" />
+            <input type="text" id="luogo_nascita" name="luogo_nascita" placeholder="es. Milano" required />
           </div>
         </div>
 
@@ -299,6 +360,7 @@
             <input
               type="text"
               id="codice_fiscale"
+              required
               name="codice_fiscale"
               maxlength="16"
               autocomplete="off"
@@ -309,7 +371,7 @@
           </div>
           <div class="form-group">
             <label for="sesso">Sesso anagrafico <span class="req">*</span></label>
-            <select id="sesso" name="sesso">
+            <select id="sesso" name="sesso" required>
               <option value="">Seleziona</option>
               <option value="M">M — Maschio</option>
               <option value="F">F — Femmina</option>
@@ -325,12 +387,12 @@
         <div class="form-row cols-2">
           <div class="form-group">
             <label for="email">Email <span class="req">*</span></label>
-            <input type="email" id="email" name="email" autocomplete="email" placeholder="es. sara.bianchi@gmail.com" />
+            <input type="email" id="email" name="email" autocomplete="email" placeholder="es. sara.bianchi@gmail.com" required />
             <span class="hint">Riceverai qui la conferma di attivazione</span>
           </div>
           <div class="form-group">
             <label for="telefono">Telefono <span class="req">*</span></label>
-            <input type="tel" id="telefono" name="telefono" autocomplete="tel" placeholder="es. 3401234567" />
+            <input type="tel" id="telefono" name="telefono" autocomplete="tel" placeholder="es. 3401234567" required />
             <span class="hint">Solo numeri, senza spazi</span>
           </div>
         </div>
@@ -343,22 +405,22 @@
         <div class="form-row cols-1">
           <div class="form-group">
             <label for="indirizzo">Via / Piazza <span class="req">*</span></label>
-            <input type="text" id="indirizzo" name="indirizzo" autocomplete="street-address" placeholder="es. Via Torino" />
+            <input type="text" id="indirizzo" name="indirizzo" autocomplete="street-address" placeholder="es. Via Torino" required />
           </div>
         </div>
 
         <div class="form-row cols-3">
           <div class="form-group">
             <label for="civico">Civico <span class="req">*</span></label>
-            <input type="text" id="civico" name="civico" placeholder="es. 12" />
+            <input type="text" id="civico" name="civico" placeholder="es. 12" required />
           </div>
           <div class="form-group">
             <label for="cap">CAP <span class="req">*</span></label>
-            <input type="text" id="cap" name="cap" maxlength="5" placeholder="es. 20123" autocomplete="postal-code" />
+            <input type="text" id="cap" name="cap" maxlength="5" placeholder="es. 20123" autocomplete="postal-code" required />
           </div>
           <div class="form-group">
             <label for="citta">Città <span class="req">*</span></label>
-            <input type="text" id="citta" name="citta" autocomplete="address-level2" placeholder="es. Milano" />
+            <input type="text" id="citta" name="citta" autocomplete="address-level2" placeholder="es. Milano" required />
           </div>
         </div>
       </div>
@@ -368,25 +430,25 @@
         <div class="card-title">Dati contrattuali</div>
 
         <div class="form-row cols-1" style="margin-bottom: 20px;">
-          <div class="form-group">
-            <label>Tipo di utilizzo <span class="req">*</span></label>
+          <fieldset class="form-group field-group">
+            <legend>Tipo di utilizzo <span class="req">*</span></legend>
             <div class="radio-group">
-              <label class="radio-option">
-                <input type="radio" id="tipo_contratto" name="tipo_contratto" value="domestico" />
-                🏠 Domestico (uso casa)
+              <label class="radio-option" for="tipo_contratto_domestico">
+                <input type="radio" id="tipo_contratto_domestico" name="tipo_contratto" value="domestico" required />
+                Domestico (uso casa)
               </label>
-              <label class="radio-option">
-                <input type="radio" name="tipo_contratto" value="non_domestico" />
-                🏢 Non domestico
+              <label class="radio-option" for="tipo_contratto_non_domestico">
+                <input type="radio" id="tipo_contratto_non_domestico" name="tipo_contratto" value="non_domestico" required />
+                Non domestico (negozio, ufficio)
               </label>
             </div>
-          </div>
+          </fieldset>
         </div>
 
         <div class="form-row cols-2">
           <div class="form-group">
             <label for="potenza">Potenza impegnata <span class="req">*</span></label>
-            <select id="potenza" name="potenza">
+            <select id="potenza" name="potenza" required>
               <option value="">Seleziona</option>
               <option value="1.5">1,5 kW</option>
               <option value="3.0" selected>3,0 kW (più comune)</option>
@@ -409,6 +471,7 @@
             <input
               type="text"
               id="pod"
+              required
               name="pod"
               maxlength="14"
               autocomplete="off"
@@ -422,6 +485,7 @@
             <input
               type="text"
               id="pdr"
+              required
               name="pdr"
               maxlength="14"
               autocomplete="off"
@@ -443,6 +507,7 @@
             <input
               type="text"
               id="iban"
+              required
               name="iban"
               maxlength="27"
               autocomplete="off"
@@ -468,7 +533,148 @@
       </p>
 
     </form>
+
+    <section id="receipt" class="receipt" aria-live="polite">
+      <h2>Richiesta inviata</h2>
+      <p class="practice">Pratica n. <strong id="receipt-code">&mdash;</strong> &middot; in lavorazione</p>
+      <dl id="receipt-data"></dl>
+    </section>
   </main>
+
+  <script>
+    // Simulazione del backend del portale.
+    //
+    // Il controllo e' deliberatamente superficiale: presenza, lunghezza esatta,
+    // prefisso. Nessun checksum, nessun controllo posizionale. E' cosi' che si
+    // comporta il portale vero, ed e' il motivo per cui l'estensione esiste: un
+    // IBAN o un codice fiscale con il carattere di controllo sbagliato passa di
+    // qui senza un rilievo.
+    //
+    // Il messaggio d'errore e' unico e non dice mai quale campo non va.
+    // Non renderlo piu' utile: e' il punto 1 della demo.
+    (function () {
+      var form    = document.getElementById('activation-form');
+      var alertEl = document.getElementById('form-alert');
+      var receipt = document.getElementById('receipt');
+
+      // len: lunghezza esatta richiesta. starts: prefisso. contains: sottostringa.
+      var RULES = {
+        codice_fiscale: { len: 16 },
+        cap:            { len: 5 },
+        pod:            { len: 14, starts: 'IT' },
+        pdr:            { len: 14 },
+        iban:           { len: 27, starts: 'IT' },
+        email:          { contains: '@' }
+      };
+
+      function groupName(el) {
+        return el.type === 'radio' ? el.name : (el.id || el.name);
+      }
+
+      function labelOf(el) {
+        if (el.type === 'radio') {
+          var fs = el.closest('fieldset');
+          var lg = fs ? fs.querySelector('legend') : null;
+          if (lg) return clean(lg.textContent);
+        }
+        var lab = document.querySelector('label[for="' + el.id + '"]');
+        return clean(lab ? lab.textContent : (el.name || el.id));
+      }
+
+      function clean(txt) {
+        return txt.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+      }
+
+      function isFilled(el) {
+        if (el.type === 'radio') {
+          return !!form.querySelector('input[name="' + el.name + '"]:checked');
+        }
+        return el.value.trim() !== '';
+      }
+
+      // Il controllo del portale, campo per campo.
+      function passesShallowCheck(el) {
+        if (!isFilled(el)) return false;
+        var rule = RULES[el.id];
+        if (!rule) return true;
+        var v = el.value.trim().toUpperCase();
+        if (rule.len && v.length !== rule.len) return false;
+        if (rule.starts && v.indexOf(rule.starts) !== 0) return false;
+        if (rule.contains && v.indexOf(rule.contains) === -1) return false;
+        return true;
+      }
+
+      function practiceCode() {
+        return 'ATT-' + new Date().getFullYear() + '-' +
+               (Math.floor(Math.random() * 900000) + 100000);
+      }
+
+      // L'estensione ascolta questo evento per loggare submit_attempt.
+      // Il detail NON dice quali campi hanno fallito: il portale non lo sa dire,
+      // e l'estensione non deve poterlo sapere da qui.
+      function emit(ok, code) {
+        document.dispatchEvent(new CustomEvent('portal:submit', {
+          detail: { ok: ok, code: code || null, at: Date.now() }
+        }));
+      }
+
+      function showReceipt(code) {
+        var dl = document.getElementById('receipt-data');
+        dl.innerHTML = '';
+        var seen = {};
+
+        [].forEach.call(form.querySelectorAll('input, select'), function (el) {
+          var key = groupName(el);
+          if (el.type === 'radio') {
+            if (!el.checked) return;
+          } else if (seen[key]) {
+            return;
+          }
+          seen[key] = true;
+
+          var dt = document.createElement('dt');
+          dt.textContent = labelOf(el);
+          var dd = document.createElement('dd');
+          if (el.type === 'radio') {
+            dd.textContent = clean(el.parentNode.textContent);
+          } else if (el.tagName === 'SELECT') {
+            dd.textContent = el.options[el.selectedIndex].text;
+          } else {
+            dd.textContent = el.value.trim();
+          }
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        });
+
+        document.getElementById('receipt-code').textContent = code;
+        form.style.display = 'none';
+        receipt.classList.add('is-visible');
+        receipt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var ok = true;
+        [].forEach.call(form.querySelectorAll('[required]'), function (el) {
+          if (!passesShallowCheck(el)) ok = false;
+        });
+
+        if (!ok) {
+          alertEl.textContent = 'Dati non validi. Verifica i dati inseriti e riprova.';
+          alertEl.classList.add('is-visible');
+          alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          emit(false, null);
+          return;
+        }
+
+        alertEl.classList.remove('is-visible');
+        var code = practiceCode();
+        showReceipt(code);
+        emit(true, code);
+      });
+    })();
+  </script>
 
 </body>
 </html>

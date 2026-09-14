@@ -39,9 +39,12 @@ Leggi questi file prima di scrivere codice:
   messaggi fra contesti. Tutto gira nella pagina.
 - **Il pannello si inietta nella pagina**, posizione fissa a destra, dentro uno
   **Shadow DOM** (`attachShadow({mode:'open'})`) così il CSS del sito non lo tocca.
-- **Manifest V3 minimo**: `permissions: ["storage"]` e un `content_scripts` che matcha
-  `http://localhost:*/*`. Niente host_permissions, niente web_accessible_resources
-  finché non servono davvero.
+- **Manifest V3 minimo**: niente host_permissions, niente web_accessible_resources finché
+  non servono davvero. Oggi il manifest è più largo di così — `permissions: ["storage",
+  "activeTab"]` e `matches: ["<all_urls>", "file://*/*"]` — quindi l'estensione si inietta
+  su ogni pagina, non solo sul modulo. Restringere a `["storage"]` e
+  `http://localhost:*/*` è due minuti: vedi la tabella delle divergenze in
+  `agents/context.md`.
 - **Nessuna build, nessun bundler, nessun framework.** JavaScript vanilla, file caricati
   in ordine dal manifest. Un passaggio di build in un hackathon è solo un modo di rompersi.
 - **Nessuna libreria esterna** se non è indispensabile.
@@ -60,8 +63,8 @@ Leggi questi file prima di scrivere codice:
 
 ## Divisione del lavoro (non aprire i file dell'altro)
 
-- **Persona A** → `scanner.js`, `validators.js`, `profile.js`
-- **Persona B** → `panel.js`, `copy.json`
+- **Persona A** → `validators.js`, `profile.js`, `live.js`
+- **Persona B** → `copy.js` (e `panel.js`, se nascerà)
 - **Insieme** → `manifest.json`, `content.js`, `log.js`
 
 Se una modifica richiede di cambiare il contratto dati in `agents/spec.md`, si dice ad alta

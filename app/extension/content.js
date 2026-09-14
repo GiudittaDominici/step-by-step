@@ -12,6 +12,8 @@
 (function () {
   'use strict';
 
+  const SBS = (window.SBS = window.SBS || {});
+
   if (window.__sbsLoaded) return;
   window.__sbsLoaded = true;
 
@@ -58,14 +60,12 @@
       detail: 'Lo trovi sulla tessera sanitaria, nella riga in basso scritta in grande.',
       tip: '💡 Hai la tessera sanitaria a portata di mano? Il codice fiscale è in basso, ben visibile.',
       type: 'codice_fiscale',
-      chunkSize: 4,
-      maxLen: 16,
     },
     sesso: {
       icon: '⚧',
       label: 'Sesso anagrafico',
-      instruction: 'Scegli M (Maschio) oppure F (Femmina).',
-      detail: 'Seleziona come indicato nel tuo documento d\'identità.',
+      instruction: "Com'è scritto sul tuo documento?",
+      detail: 'Leggi le opzioni qui sotto e scegli.',
       tip: null,
       type: 'select',
     },
@@ -108,7 +108,6 @@
       detail: 'Lo trovi sulla bolletta o sull\'intestazione di qualsiasi lettera ricevuta a quell\'indirizzo.',
       tip: '💡 Esempio: 20121 per il centro di Milano, 00185 per il centro di Roma.',
       type: 'text',
-      maxLen: 5,
     },
     citta: {
       icon: '🌆',
@@ -121,17 +120,17 @@
     tipo_contratto: {
       icon: '📋',
       label: 'Tipo di utilizzo',
-      instruction: 'Scegli come userai la fornitura.',
-      detail: '"Domestico" = uso casa. "Non domestico" = negozio, ufficio, laboratorio.',
-      tip: '💡 Nella maggior parte dei casi si sceglie "Domestico" (uso abitazione).',
+      instruction: 'A cosa serve la fornitura?',
+      detail: 'Leggi le due opzioni qui sotto e scegli.',
+      tip: null,
       type: 'select',
     },
     potenza: {
       icon: '⚡',
       label: 'Potenza impegnata',
-      instruction: 'Scegli la potenza del contratto elettrico.',
-      detail: 'Se non lo sai, guarda la vecchia bolletta oppure scegli 3,0 kW — è la più comune per un\'abitazione.',
-      tip: '💡 Per la maggior parte delle famiglie italiane va bene 3,0 kW.',
+      instruction: 'Quanta corrente può usare la casa insieme?',
+      detail: 'Leggi le opzioni qui sotto. Se non lo sai, guarda la vecchia bolletta.',
+      tip: null,
       type: 'select',
     },
     pod: {
@@ -141,8 +140,6 @@
       detail: '14 caratteri in totale: inizia sempre con IT, seguito da numeri e lettere. Lo trovi sulla bolletta della luce, in alto o al centro della pagina.',
       tip: '💡 Hai una bolletta vecchia? Cerca "POD" o "Punto di prelievo" — il codice inizia con IT e ha l\'aspetto: IT001E12345678.',
       type: 'pod',
-      chunkSize: 4,
-      maxLen: 14,
     },
     pdr: {
       icon: '🔥',
@@ -151,8 +148,6 @@
       detail: '14 cifre numeriche. Lo trovi sulla bolletta del gas, solitamente in alto a destra o nella sezione "Dati fornitura".',
       tip: '💡 Cerca "PDR" o "Punto di Riconsegna" sulla bolletta. È una sequenza di soli numeri, es. 04154895190000.',
       type: 'pdr',
-      chunkSize: 4,
-      maxLen: 14,
     },
     iban: {
       icon: '🏦',
@@ -161,8 +156,6 @@
       detail: '27 caratteri in totale: inizia sempre con IT seguito da numeri e lettere.',
       tip: '💡 Lo trovi nell\'app della tua banca → "Dettagli conto" → IBAN. Oppure in cima all\'estratto conto cartaceo.',
       type: 'iban',
-      chunkSize: 4,
-      maxLen: 27,
     },
   };
 
@@ -178,6 +171,8 @@
     inactivityTimer: null,
     fieldFocusHandlers: [],
     programmaticFocus: false,
+    detachLive: null,
+    forcedStep: null,
   };
 
   // ---------------------------------------------------------------------------
@@ -213,6 +208,12 @@
   // ATTIVAZIONE
   // ---------------------------------------------------------------------------
   function activate() {
+    SBS.live.injectStyles();
+    SBS.live.resetRecorded();
+    SBS.profile.load().then(startGuide);
+  }
+
+  function startGuide() {
     state.fields = discoverFields();
     if (state.fields.length === 0) {
       showToast('Nessun campo trovato in questa pagina.');
@@ -249,12 +250,21 @@
   function discoverFields() {
     const SKIP_TYPES = new Set(['hidden', 'submit', 'button', 'reset', 'image', 'file']);
     const fields = [];
+    const seenRadioGroups = new Set();
 
     document.querySelectorAll('input, select, textarea').forEach((el) => {
       if (SKIP_TYPES.has(el.type)) return;
       if (!el.offsetParent) return; // elemento nascosto
 
-      const id = el.id || el.name || '';
+      // Le radio con lo stesso name sono UNA domanda, non una per opzione.
+      // Senza questo il pannello chiede due volte la stessa cosa.
+      if (el.type === 'radio') {
+        if (!el.name || seenRadioGroups.has(el.name)) return;
+        seenRadioGroups.add(el.name);
+      }
+
+      // Per un gruppo di radio la chiave è il name: l'id cambia da opzione a opzione.
+      const id = el.type === 'radio' ? el.name : (el.id || el.name || '');
       const guide = FIELD_GUIDE[id] || inferGuide(el);
       fields.push({ element: el, id, guide });
     });
@@ -264,10 +274,18 @@
 
   function inferGuide(el) {
     let labelText = '';
+
+    // Per una radio, la label che la avvolge è il testo dell'opzione, non la
+    // domanda. La domanda sta nella legend del fieldset.
+    if (el.type === 'radio') {
+      const legend = el.closest('fieldset') && el.closest('fieldset').querySelector('legend');
+      if (legend) labelText = legend.textContent.replace(/[*:]+/g, '').trim();
+    }
+
     const labelEl =
       el.closest('label') ||
       (el.id ? document.querySelector(`label[for="${el.id}"]`) : null);
-    if (labelEl) labelText = labelEl.textContent.trim().replace(/[*:]+$/, '').trim();
+    if (!labelText && labelEl) labelText = labelEl.textContent.trim().replace(/[*:]+$/, '').trim();
 
     return {
       icon: iconForInputType(el.type),
@@ -309,6 +327,7 @@
         <div id="sbs-instruction"></div>
         <div id="sbs-detail"></div>
         <div id="sbs-preview" aria-live="polite"></div>
+        <div id="sbs-warn" aria-live="assertive"></div>
         <div id="sbs-tip-wrap"></div>
         <div id="sbs-idle-hint" aria-live="polite"></div>
       </div>
@@ -323,7 +342,7 @@
 
     document.getElementById('sbs-close').addEventListener('click', deactivate);
     document.getElementById('sbs-prev').addEventListener('click', () => goToStep(state.currentStep - 1));
-    document.getElementById('sbs-next').addEventListener('click', () => goToStep(state.currentStep + 1));
+    document.getElementById('sbs-next').addEventListener('click', attemptNext);
   }
 
   // ---------------------------------------------------------------------------
@@ -347,23 +366,26 @@
     }
 
     clearInactivityTimer();
+    const warnBox = document.getElementById('sbs-warn');
+    if (warnBox) warnBox.innerHTML = '';
+    if (state.forcedStep !== index) state.forcedStep = null;
     state.currentStep = index;
     const { element, guide } = state.fields[index];
 
-    updatePanel(guide, index);
+    const kind = SBS.kindOf(element);
+    updatePanel(guide, index, kind, state.fields[index].id);
     highlightFields(element);
 
     // Scroll verso il campo attivo
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // Listener per preview chunked (CF, IBAN, ecc.)
-    if (guide.chunkSize) {
-      state.inputHandler = () => updateChunkedPreview(element, guide);
-      element.addEventListener('input', state.inputHandler);
-      updateChunkedPreview(element, guide);
-    } else {
-      document.getElementById('sbs-preview').innerHTML = '';
+    // Verifica dal vivo: blocchi da 4, gruppo sospetto, scomposizione.
+    // Quanto parla lo decide il profilo d'errore (vedi live.js).
+    if (state.detachLive) {
+      state.detachLive();
+      state.detachLive = null;
     }
+    state.detachLive = SBS.live.attach(element, kind, document.getElementById('sbs-preview'));
 
     // Sposta il focus sul campo: il flag impedisce che il nostro listener
     // di focus interpreti questo cambio come una navigazione manuale.
@@ -379,7 +401,7 @@
   // ---------------------------------------------------------------------------
   // AGGIORNAMENTO PANNELLO
   // ---------------------------------------------------------------------------
-  function updatePanel(guide, index) {
+  function updatePanel(guide, index, kind, id) {
     const total = state.fields.length;
     const pct = Math.round(((index + 1) / total) * 100);
 
@@ -387,14 +409,27 @@
     document.getElementById('sbs-progress-track').setAttribute('aria-valuenow', pct);
     document.getElementById('sbs-step-counter').textContent = `Passo ${index + 1} di ${total}`;
 
-    document.getElementById('sbs-field-icon').textContent = guide.icon;
+    // Supporto 'muto': su questo campo Sara è autonoma da due compilazioni.
+    // Muto vuol dire muto, anche qui sopra: restano l'etichetta e il conteggio,
+    // così sa dov'è, e nient'altro. Vedi la regola in agents/spec.md.
+    const muto = SBS.profile.supportFor(kind) === 'muto';
+
+    // I testi vengono da copy.js quando ci sono: è la sorgente unica, scritta
+    // sulle regole di agents/persona.md. FIELD_GUIDE resta come riserva per i
+    // campi che copy.js non copre (nome, indirizzo, e simili).
+    const copy = SBS.copyFor(kind, id);
+    const instruction = copy ? copy.what : guide.instruction;
+    const detail = copy ? copy.where : guide.detail;
+    const tip = copy ? (copy.example ? 'Esempio: ' + copy.example : null) : guide.tip;
+
+    document.getElementById('sbs-field-icon').textContent = muto ? '' : guide.icon;
     document.getElementById('sbs-field-label').textContent = guide.label;
-    document.getElementById('sbs-instruction').textContent = guide.instruction;
-    document.getElementById('sbs-detail').textContent = guide.detail || '';
+    document.getElementById('sbs-instruction').textContent = muto ? '' : instruction || '';
+    document.getElementById('sbs-detail').textContent = muto ? 'Questo lo sai fare.' : detail || '';
     document.getElementById('sbs-idle-hint').innerHTML = '';
 
     const tipWrap = document.getElementById('sbs-tip-wrap');
-    tipWrap.innerHTML = guide.tip ? `<div class="sbs-tip">${guide.tip}</div>` : '';
+    tipWrap.innerHTML = !muto && tip ? `<div class="sbs-tip">${tip}</div>` : '';
 
     const prevBtn = document.getElementById('sbs-prev');
     const nextBtn = document.getElementById('sbs-next');
@@ -406,61 +441,47 @@
   // HIGHLIGHT / DIM DEI CAMPI
   // ---------------------------------------------------------------------------
   function highlightFields(activeEl) {
+    // Un gruppo di radio si accende tutto: è una domanda sola, e attenuare
+    // metà delle opzioni nasconde parte della domanda che stiamo facendo.
+    const isActive = (el) =>
+      el === activeEl ||
+      (activeEl.type === 'radio' && el.type === 'radio' && el.name === activeEl.name);
+
+    document.querySelectorAll('.sbs-active-group').forEach((g) => g.classList.remove('sbs-active-group'));
+
     document.querySelectorAll('input, select, textarea').forEach((el) => {
       el.classList.remove('sbs-active', 'sbs-dimmed');
-      if (el === activeEl) {
+      if (isActive(el)) {
         el.classList.add('sbs-active');
       } else {
         el.classList.add('sbs-dimmed');
       }
     });
+
+    // Per una radio l'input è il pallino: un contorno lì non si vede come il
+    // campo attivo. Il contorno va intorno alla domanda intera, cioè al
+    // fieldset che la contiene.
+    if (activeEl.type === 'radio') {
+      const box = activeEl.closest('fieldset') || activeEl.closest('.radio-group');
+      if (box) box.classList.add('sbs-active-group');
+    }
   }
 
   function unhighlightField(el) {
     el.classList.remove('sbs-active');
+    const box = el.closest && (el.closest('fieldset') || el.closest('.radio-group'));
+    if (box) box.classList.remove('sbs-active-group');
   }
 
   function clearAllHighlights() {
-    document.querySelectorAll('.sbs-active, .sbs-dimmed').forEach((el) => {
-      el.classList.remove('sbs-active', 'sbs-dimmed');
+    document.querySelectorAll('.sbs-active, .sbs-dimmed, .sbs-active-group').forEach((el) => {
+      el.classList.remove('sbs-active', 'sbs-dimmed', 'sbs-active-group');
     });
   }
 
   // ---------------------------------------------------------------------------
   // PREVIEW CHUNKED (Codice Fiscale, IBAN, ecc.)
   // ---------------------------------------------------------------------------
-  function updateChunkedPreview(el, guide) {
-    const raw = el.value.replace(/\s/g, '').toUpperCase();
-    const preview = document.getElementById('sbs-preview');
-
-    if (!raw) {
-      preview.innerHTML = '';
-      return;
-    }
-
-    const size = guide.chunkSize;
-    const chunks = [];
-    for (let i = 0; i < raw.length; i += size) {
-      chunks.push(raw.slice(i, i + size));
-    }
-    const chunked = chunks.join(' · ');
-
-    const remaining = guide.maxLen ? guide.maxLen - raw.length : null;
-    const remainingText = remaining !== null && remaining > 0
-      ? `<div class="sbs-remaining">Mancano ancora <strong>${remaining}</strong> caratteri</div>`
-      : remaining === 0
-      ? `<div class="sbs-remaining sbs-remaining-ok">✓ Lunghezza corretta</div>`
-      : '';
-
-    preview.innerHTML = `
-      <div class="sbs-chunk-box">
-        <div class="sbs-chunk-label">Come stai scrivendo:</div>
-        <code class="sbs-chunk-value">${chunked}</code>
-        ${remainingText}
-      </div>
-    `;
-  }
-
   // ---------------------------------------------------------------------------
   // TIMER INATTIVITÀ
   // ---------------------------------------------------------------------------
@@ -475,6 +496,8 @@
   function showIdleHint(guide) {
     const hint = document.getElementById('sbs-idle-hint');
     if (!hint) return;
+    const field = state.fields[state.currentStep];
+    SBS.log && SBS.log('help_opened', { id: field ? field.id : null, motivo: 'inattività' });
     const msg = guide.tip || 'Hai bisogno di aiuto? Puoi saltare questo campo per ora con il pulsante "Avanti".';
     hint.innerHTML = `<div class="sbs-idle-box">🤔 ${msg}</div>`;
   }
@@ -482,23 +505,248 @@
   // ---------------------------------------------------------------------------
   // SCHERMATA FINALE
   // ---------------------------------------------------------------------------
-  function showComplete() {
-    clearAllHighlights();
+  // ---------------------------------------------------------------------------
+  // STATO DI UN CAMPO
+  //
+  // Un campo saltato non e' un campo finito. Prima di questa funzione il
+  // pannello avanzava sempre, e Sara arrivava in fondo credendo di aver
+  // compilato tutto.
+  // ---------------------------------------------------------------------------
+  function isRequired(el) {
+    if (el.required) return true;
+    if (el.type === 'radio' && el.name) {
+      return !!document.querySelector('input[name="' + CSS.escape(el.name) + '"][required]');
+    }
+    return false;
+  }
 
-    document.getElementById('sbs-content').innerHTML = `
-      <div class="sbs-complete">
-        <div class="sbs-complete-icon">🎉</div>
-        <div class="sbs-complete-title">Ottimo lavoro!</div>
-        <div class="sbs-complete-text">Hai compilato tutti i campi del modulo.<br>Ora puoi inviarlo.</div>
-      </div>
-    `;
+  function isFilled(el) {
+    if (el.type === 'radio' && el.name) {
+      return !!document.querySelector('input[name="' + CSS.escape(el.name) + '"]:checked');
+    }
+    return String(el.value || '').trim() !== '';
+  }
+
+  // { ok, stato: 'ok'|'vuoto'|'errore'|'facoltativo', message }
+  function fieldStatus(field) {
+    const el = field.element;
+    const kind = SBS.kindOf(el);
+
+    if (!isFilled(el)) {
+      return isRequired(el)
+        ? { ok: false, stato: 'vuoto', message: 'Questo campo è ancora vuoto.' }
+        : { ok: true, stato: 'facoltativo', message: null };
+    }
+
+    const res = SBS.validate(kind, el.value);
+    return res.ok
+      ? { ok: true, stato: 'ok', message: null }
+      : { ok: false, stato: 'errore', message: res.message };
+  }
+
+  function openProblems() {
+    return state.fields
+      .map((field, index) => ({ field: field, index: index, status: fieldStatus(field) }))
+      .filter((row) => !row.status.ok);
+  }
+
+  // ---------------------------------------------------------------------------
+  // AVANTI
+  //
+  // Avanti verifica. Se qualcosa non torna lo dice e lascia comunque passare,
+  // ma con un clic esplicito: Sara decide, non viene bloccata e non viene
+  // fatta avanzare per distrazione.
+  // ---------------------------------------------------------------------------
+  function attemptNext() {
+    const field = state.fields[state.currentStep];
+    if (!field) return goToStep(state.currentStep + 1);
+
+    const status = fieldStatus(field);
+    if (status.ok) {
+      // Nessun errore intercettato su questo campo: l'ha fatto da sola.
+      // È la metrica che dice se il progetto sta funzionando davvero.
+      if (status.stato === 'ok' && !SBS.live.hadError(field.element)) {
+        SBS.log && SBS.log('field_completed_unaided', {
+          id: field.id,
+          kind: SBS.kindOf(field.element),
+        });
+      }
+      return goToStep(state.currentStep + 1);
+    }
+    if (state.forcedStep === state.currentStep) {
+      return goToStep(state.currentStep + 1);
+    }
+
+    state.forcedStep = state.currentStep;
+    SBS.log && SBS.log('field_incomplete', { id: field.id, stato: status.stato });
+
+    const warn = document.getElementById('sbs-warn');
+    if (!warn) return goToStep(state.currentStep + 1);
+    warn.innerHTML =
+      '<div class="sbs-warn-box">' +
+      '<strong>' + esc(status.message) + '</strong>' +
+      '<button type="button" id="sbs-skip">Vai avanti lo stesso</button>' +
+      '</div>';
+    document.getElementById('sbs-skip').addEventListener('click', () => {
+      SBS.log && SBS.log('field_skipped', { id: field.id, stato: status.stato });
+      goToStep(state.currentStep + 1);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // RIEPILOGO
+  // ---------------------------------------------------------------------------
+  function showComplete(reason) {
+    clearAllHighlights();
+    if (state.detachLive) {
+      state.detachLive();
+      state.detachLive = null;
+    }
+
+    const problems = openProblems();
+    const content = document.getElementById('sbs-content');
+    const nav = document.getElementById('sbs-nav');
+
+    let head = '';
+    if (reason === 'submit-ko') {
+      head =
+        '<div class="sbs-review-head">Il portale ha rifiutato il modulo.</div>' +
+        '<p class="sbs-review-sub">Non dice quale campo. Guardiamo insieme.</p>';
+    } else if (problems.length) {
+      head =
+        '<div class="sbs-review-head">Manca ancora qualcosa.</div>' +
+        '<p class="sbs-review-sub">Tocca una riga per tornare sul campo.</p>';
+    } else {
+      head =
+        '<div class="sbs-review-head">Tutto verificato.</div>' +
+        '<p class="sbs-review-sub">I codici tornano. Puoi inviare il modulo.</p>';
+    }
+
+    const rows = problems
+      .map(
+        (row) =>
+          '<button type="button" class="sbs-review-row" data-step="' + row.index + '">' +
+          '<strong>' + esc(row.field.guide.label) + '</strong>' +
+          '<span>' + esc(row.status.message) + '</span>' +
+          '</button>'
+      )
+      .join('');
+
+    content.innerHTML = head + (rows ? '<div class="sbs-review">' + rows + '</div>' : '');
+
+    content.querySelectorAll('.sbs-review-row').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        restoreStepLayout();
+        goToStep(+btn.dataset.step);
+      });
+    });
 
     const progress = document.getElementById('sbs-progress-bar');
     if (progress) progress.style.width = '100%';
-    document.getElementById('sbs-step-counter').textContent = 'Completato ✓';
+    document.getElementById('sbs-step-counter').textContent = problems.length
+      ? problems.length + (problems.length === 1 ? ' campo da rivedere' : ' campi da rivedere')
+      : 'Tutto verificato';
 
+    nav.innerHTML =
+      '<button class="sbs-btn sbs-btn-secondary" id="sbs-back-fields">Torna ai campi</button>' +
+      '<button class="sbs-btn sbs-btn-primary" id="sbs-close-final">Chiudi</button>';
+    document.getElementById('sbs-close-final').addEventListener('click', deactivate);
+    document.getElementById('sbs-back-fields').addEventListener('click', () => {
+      restoreStepLayout();
+      goToStep(problems.length ? problems[0].index : 0);
+    });
+  }
+
+  // Il riepilogo sostituisce il contenuto del pannello: per tornare ai campi
+  // va rimessa la struttura che goToStep si aspetta di trovare.
+  function restoreStepLayout() {
+    document.getElementById('sbs-content').innerHTML =
+      '<div id="sbs-field-icon" aria-hidden="true"></div>' +
+      '<div id="sbs-field-label"></div>' +
+      '<div id="sbs-instruction"></div>' +
+      '<div id="sbs-detail"></div>' +
+      '<div id="sbs-preview" aria-live="polite"></div>' +
+      '<div id="sbs-warn" aria-live="assertive"></div>' +
+      '<div id="sbs-tip-wrap"></div>' +
+      '<div id="sbs-idle-hint" aria-live="polite"></div>';
+
+    document.getElementById('sbs-nav').innerHTML =
+      '<button id="sbs-prev" class="sbs-btn sbs-btn-secondary">← Indietro</button>' +
+      '<button id="sbs-next" class="sbs-btn sbs-btn-primary">Avanti →</button>';
+    document.getElementById('sbs-prev').addEventListener('click', () => goToStep(state.currentStep - 1));
+    document.getElementById('sbs-next').addEventListener('click', attemptNext);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ESITO DELL'INVIO
+  //
+  // Il momento in cui il portale dice «Dati non validi» e' esattamente quello
+  // in cui Sara ha bisogno di noi. Prima l'assistente si chiudeva e la
+  // lasciava sola davanti al messaggio.
+  // ---------------------------------------------------------------------------
+  document.addEventListener('portal:submit', (e) => {
+    const ok = !!(e.detail && e.detail.ok);
+
+    if (ok) {
+      SBS.profile.endForm(state.fields.map(({ element }) => SBS.kindOf(element)));
+      if (state.active) showSummary();
+      return;
+    }
+
+    // Rifiutato: riapriamo l'assistente sul riepilogo, anche se era chiuso.
+    if (!state.active) {
+      if (!state.fields.length) state.fields = discoverFields();
+      state.active = true;
+      const btn = document.getElementById('sbs-activate');
+      if (btn) btn.style.display = 'none';
+      if (!state.panel) createPanel();
+      attachFocusTracking();
+    }
+    showComplete('submit-ko');
+  });
+
+  // Chiusura: cosa e' successo, in numeri. E' il punto 4 della definition of
+  // done in agents/spec.md.
+  function showSummary() {
+    clearAllHighlights();
+    if (state.detachLive) {
+      state.detachLive();
+      state.detachLive = null;
+    }
+
+    const snap = SBS.profile.snapshot();
+    const kinds = Object.keys(snap.supportByKind);
+    const errori = Object.keys(snap.errorsByKind).reduce((n, k) => n + snap.errorsByKind[k], 0);
+    const muti = kinds.filter((k) => snap.supportByKind[k] === 'muto');
+
+    const righe = kinds
+      .map(
+        (k) =>
+          '<div class="sbs-sum-row"><code>' + esc(k) + '</code>' +
+          '<span>' + esc(snap.supportByKind[k]) + '</span></div>'
+      )
+      .join('');
+
+    document.getElementById('sbs-content').innerHTML =
+      '<div class="sbs-review-head">Modulo inviato.</div>' +
+      '<p class="sbs-review-sub">Errori intercettati prima dell' + String.fromCharCode(39) +
+      'invio: <strong>' + errori + '</strong>. Moduli completati: <strong>' +
+      snap.formsCompleted + '</strong>.</p>' +
+      (righe ? '<div class="sbs-sum">' + righe + '</div>' : '') +
+      (muti.length
+        ? '<p class="sbs-review-sub">Al prossimo modulo non ti dirò più niente su: ' +
+          esc(muti.join(', ')) + '.</p>'
+        : '');
+
+    document.getElementById('sbs-step-counter').textContent = 'Inviato';
     const nav = document.getElementById('sbs-nav');
-    nav.innerHTML = `<button class="sbs-btn sbs-btn-primary" id="sbs-close-final" style="width:100%">Chiudi assistente</button>`;
+    nav.innerHTML = '<button class="sbs-btn sbs-btn-primary" id="sbs-close-final" style="width:100%">Chiudi</button>';
     document.getElementById('sbs-close-final').addEventListener('click', deactivate);
   }
 
@@ -507,6 +755,10 @@
   // ---------------------------------------------------------------------------
   function deactivate() {
     state.active = false;
+    if (state.detachLive) {
+      state.detachLive();
+      state.detachLive = null;
+    }
     clearInactivityTimer();
     clearAllHighlights();
 
@@ -683,38 +935,6 @@
         margin-top: 2px;
       }
 
-      /* Chunked preview */
-      .sbs-chunk-box {
-        background: #f7f8fc;
-        border: 1.5px solid #d2daff;
-        border-radius: 10px;
-        padding: 13px 15px;
-        margin-top: 14px;
-      }
-      .sbs-chunk-label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: #6B7385;
-        margin-bottom: 6px;
-      }
-      .sbs-chunk-value {
-        display: block;
-        font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
-        font-size: 18px;
-        font-weight: 700;
-        color: #1428AA;
-        letter-spacing: 0.08em;
-        word-break: break-all;
-      }
-      .sbs-remaining {
-        margin-top: 7px;
-        font-size: 13px;
-        color: #6B7385;
-      }
-      .sbs-remaining-ok { color: #2F724C; font-weight: 600; }
-
       /* Idle hint */
       .sbs-idle-box {
         margin-top: 14px;
@@ -727,23 +947,91 @@
         line-height: 1.5;
       }
 
-      /* Schermata completa */
-      .sbs-complete {
-        text-align: center;
-        padding: 30px 10px;
+      /* Avviso su Avanti */
+      .sbs-warn-box {
+        margin-top: 14px;
+        background: #FFFBF0;
+        border: 1.5px solid #F0C040;
+        border-radius: 10px;
+        padding: 12px 14px;
       }
-      .sbs-complete-icon { font-size: 52px; margin-bottom: 16px; }
-      .sbs-complete-title {
-        font-size: 22px;
+      .sbs-warn-box strong {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #7a5c00;
+        line-height: 1.5;
+        margin-bottom: 9px;
+      }
+      .sbs-warn-box button {
+        background: none;
+        border: 1.5px solid #d8b45e;
+        border-radius: 7px;
+        padding: 7px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #7a5c00;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .sbs-warn-box button:hover { background: #F7EBCE; }
+
+      /* Riepilogo */
+      .sbs-review-head {
+        font-size: 20px;
         font-weight: 700;
-        color: #2F724C;
-        margin-bottom: 10px;
+        color: #1F1F1F;
+        line-height: 1.35;
+        margin-bottom: 8px;
       }
-      .sbs-complete-text {
-        font-size: 15px;
-        color: #555;
+      .sbs-review-sub {
+        font-size: 14.5px;
+        color: #4A5568;
         line-height: 1.6;
+        margin: 0 0 16px;
       }
+      .sbs-review { display: flex; flex-direction: column; gap: 8px; }
+      .sbs-review-row {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 1.5px solid #FFCFDE;
+        background: #FFF0F4;
+        border-radius: 10px;
+        padding: 11px 13px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .sbs-review-row:hover { border-color: #E5003F; }
+      .sbs-review-row strong {
+        display: block;
+        font-size: 14px;
+        color: #BB003A;
+        margin-bottom: 2px;
+      }
+      .sbs-review-row span {
+        display: block;
+        font-size: 13px;
+        color: #8a3c58;
+        line-height: 1.45;
+      }
+
+      /* Metriche */
+      .sbs-sum { display: flex; flex-direction: column; gap: 1px; background: #e9ecfd; border-radius: 8px; overflow: hidden; }
+      .sbs-sum-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+        padding: 8px 12px;
+        font-size: 13px;
+      }
+      .sbs-sum-row code {
+        font-family: 'SF Mono', Consolas, monospace;
+        font-weight: 700;
+        color: #1428AA;
+      }
+      .sbs-sum-row span { color: #6B7385; }
 
       /* Nav */
       #sbs-nav {
@@ -796,7 +1084,8 @@
       @keyframes sbs-fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
       /* ====== CAMPO ATTIVO ====== */
-      input.sbs-active,
+      /* Le radio no: il loro contorno sta sul fieldset, qui sotto. */
+      input.sbs-active:not([type="radio"]),
       select.sbs-active,
       textarea.sbs-active {
         outline: 3px solid #1428AA !important;
@@ -807,6 +1096,18 @@
       @keyframes sbs-pulse {
         0%, 100% { outline-color: #1428AA; }
         50%       { outline-color: #526FFF; }
+      }
+
+      /* Gruppo di radio attivo: la domanda intera, non i singoli pallini. */
+      .sbs-active-group {
+        outline: 3px solid #1428AA !important;
+        outline-offset: 8px !important;
+        border-radius: 6px;
+        animation: sbs-pulse 2.2s ease-in-out infinite;
+      }
+      .sbs-active-group input.sbs-dimmed,
+      .sbs-active-group select.sbs-dimmed {
+        opacity: 1 !important;
       }
 
       /* ====== CAMPI DIMMED ====== */
