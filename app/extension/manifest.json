@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Step by Step · Assistente Moduli",
+  "description": "Compila moduli complessi un passo alla volta. Progettato per chi ha dislessia o difficoltà di attenzione.",
+  "version": "1.0.0",
+  "permissions": ["storage", "activeTab"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Step by Step"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>", "file://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

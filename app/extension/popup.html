@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    body {
+      width: 260px;
+      margin: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: #fff;
+    }
+    .header {
+      background: #1428AA;
+      color: white;
+      padding: 16px 18px 14px;
+    }
+    .header h1 {
+      margin: 0 0 2px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .header p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.75;
+    }
+    .body {
+      padding: 16px 18px;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #444;
+      margin-bottom: 14px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+    }
+    .dot.active { background: #2F724C; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 2px solid #1428AA;
+      background: #1428AA;
+      color: white;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .btn:hover { background: #0f1f85; }
+    .note {
+      font-size: 11px;
+      color: #888;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🦮 Step by Step</h1>
+    <p>Assistente per la compilazione guidata</p>
+  </div>
+  <div class="body">
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">Caricamento...</span>
+    </div>
+    <button class="btn" id="open-demo">Apri il modulo demo</button>
+    <p class="note">
+      Visita il modulo demo e clicca il pulsante blu<br>
+      <strong>"Aiuto passo per passo"</strong> per attivare l'assistente.
+    </p>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
