@@ -176,6 +176,8 @@
     panel: null,
     inputHandler: null,
     inactivityTimer: null,
+    fieldFocusHandlers: [],
+    programmaticFocus: false,
   };
 
   // ---------------------------------------------------------------------------
@@ -222,7 +224,23 @@
     if (btn) btn.style.display = 'none';
 
     createPanel();
+    attachFocusTracking();
     goToStep(0);
+  }
+
+  // ---------------------------------------------------------------------------
+  // FOCUS TRACKING — risponde al focus manuale dell'utente su un campo
+  // ---------------------------------------------------------------------------
+  function attachFocusTracking() {
+    state.fieldFocusHandlers = [];
+    state.fields.forEach(({ element }, idx) => {
+      const handler = () => {
+        if (!state.active || state.programmaticFocus) return;
+        if (idx !== state.currentStep) goToStep(idx);
+      };
+      element.addEventListener('focus', handler);
+      state.fieldFocusHandlers.push({ element, handler });
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -347,8 +365,11 @@
       document.getElementById('sbs-preview').innerHTML = '';
     }
 
-    // Focus ritardato per non interferire con lo scroll
-    setTimeout(() => element.focus(), 350);
+    // Sposta il focus sul campo: il flag impedisce che il nostro listener
+    // di focus interpreti questo cambio come una navigazione manuale.
+    state.programmaticFocus = true;
+    element.focus();
+    state.programmaticFocus = false;
 
     // Timer inattività: 20 secondi senza input → suggerimento extra
     state.inactivityTimer = setTimeout(() => showIdleHint(guide), 20000);
@@ -488,6 +509,11 @@
     state.active = false;
     clearInactivityTimer();
     clearAllHighlights();
+
+    state.fieldFocusHandlers.forEach(({ element, handler }) => {
+      element.removeEventListener('focus', handler);
+    });
+    state.fieldFocusHandlers = [];
 
     if (state.panel) {
       state.panel.remove();
